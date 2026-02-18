@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Захарцов Андрей — IoT Developer</title>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Russo+One&family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
   :root {
     --green: #00ff41;
@@ -23,7 +23,7 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'Share Tech Mono', monospace;
+    font-family: 'JetBrains Mono', 'Share Tech Mono', monospace;
     overflow-x: hidden;
     cursor: crosshair;
   }
@@ -74,7 +74,7 @@
     padding: 0 24px;
   }
   .nav-logo {
-    font-family: 'Orbitron', sans-serif;
+    font-family: 'Russo One', 'Orbitron', sans-serif;
     font-size: 13px;
     color: var(--green);
     letter-spacing: 3px;
@@ -114,7 +114,7 @@
   .hero-tag::before { content: '> '; color: var(--dim); }
 
   .hero-name {
-    font-family: 'Orbitron', sans-serif;
+    font-family: 'Russo One', 'Orbitron', sans-serif;
     font-size: clamp(36px, 6vw, 72px);
     font-weight: 900;
     line-height: 1;
@@ -146,7 +146,7 @@
   }
 
   .hero-role {
-    font-family: 'Orbitron', sans-serif;
+    font-family: 'Russo One', 'Orbitron', sans-serif;
     font-size: clamp(14px, 2.5vw, 20px);
     font-weight: 400;
     color: var(--dim);
@@ -204,6 +204,18 @@
     vertical-align: middle;
     margin-left: 2px;
   }
+  /* Block cursor: solid while typing, blinks when done */
+  .block-cursor {
+    display: inline-block;
+    width: 9px; height: 15px;
+    background: var(--green);
+    vertical-align: middle;
+    margin-left: 2px;
+    box-shadow: 0 0 6px var(--green);
+  }
+  .block-cursor.blinking {
+    animation: blink 1s step-end infinite;
+  }
 
   .hero-contacts {
     display: flex;
@@ -254,7 +266,7 @@
     min-height: 1em;
   }
   .section-title {
-    font-family: 'Orbitron', sans-serif;
+    font-family: 'Russo One', 'Orbitron', sans-serif;
     font-size: clamp(22px, 4vw, 36px);
     font-weight: 700;
     color: var(--green);
@@ -299,7 +311,7 @@
     box-shadow: 0 0 20px rgba(0,255,65,0.08);
   }
   .skill-cat-title {
-    font-family: 'Orbitron', sans-serif;
+    font-family: 'Russo One', 'Orbitron', sans-serif;
     font-size: 11px;
     letter-spacing: 3px;
     color: var(--green);
@@ -354,7 +366,7 @@
     min-height: 1em;
   }
   .timeline-company {
-    font-family: 'Orbitron', sans-serif;
+    font-family: 'Russo One', 'Orbitron', sans-serif;
     font-size: 16px;
     color: var(--green);
     margin-bottom: 4px;
@@ -397,13 +409,13 @@
     gap: 12px;
   }
   .project-num {
-    font-family: 'Orbitron', sans-serif;
+    font-family: 'Russo One', 'Orbitron', sans-serif;
     font-size: 10px;
     color: var(--dim);
     letter-spacing: 2px;
   }
   .project-title {
-    font-family: 'Orbitron', sans-serif;
+    font-family: 'Russo One', 'Orbitron', sans-serif;
     font-size: 14px;
     color: var(--green);
     flex: 1;
@@ -614,7 +626,7 @@
       </div>
       <div class="hero-bio">
         <span class="prompt">// about.me</span>
-        <span id="bio-text"></span><span class="cursor-blink" id="bio-cursor"></span>
+        <span id="bio-text"></span><span class="block-cursor" id="bio-cursor"></span>
       </div>
       <div class="hero-contacts">
         <a href="/cdn-cgi/l/email-protection#03622d7962686b627177706c75437a626d67667b2d7176" class="contact-btn">&gt;_ Email</a>
@@ -945,31 +957,69 @@ var TW_COMMA    = 90;
 var TW_DOT      = 160;
 var TW_HESITATE = 0.06;
 
+/* Bio-specific timing — ×4 faster than default (original ×2, then ×2 again) */
+var BIO_MIN      = 3;
+var BIO_MAX      = 9;
+var BIO_COMMA    = 22;
+var BIO_DOT      = 40;
+var BIO_HESITATE = 0.02;
+
 function rnd(a, b) { return a + Math.random() * (b - a); }
 
 function typeInto(el, text, addCursor) {
   return new Promise(function(resolve) {
     el.textContent = '';
     var i = 0;
-    var cur = null;
-    if (addCursor) {
-      cur = document.createElement('span');
-      cur.className = 'cursor-blink';
-      el.parentNode.insertBefore(cur, el.nextSibling);
+
+    // Katakana-only guess pool — same visual width as latin/cyrillic in monospace
+    var kataPool = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+
+    function isGuessable(ch) {
+      // Skip spaces, punctuation, brackets — type them directly
+      return ch.trim().length > 0 && !/[.,!?:;·—\-\/\\[\]{}()<>«»"'`@#%^&*+=|~]/.test(ch);
     }
+
+    // Type one character: 2–6 katakana guesses then the real char
+    function typeChar(ch, done) {
+      if (!isGuessable(ch)) {
+        el.textContent += ch;
+        done();
+        return;
+      }
+
+      var wrongCount = 1 + Math.floor(Math.random() * 3); // 1–3
+      var attempts = 0;
+
+      function attempt() {
+        if (attempts >= wrongCount) {
+          el.textContent += ch;
+          done();
+          return;
+        }
+        var kata = kataPool[Math.floor(Math.random() * kataPool.length)];
+        el.textContent += kata;
+        attempts++;
+        setTimeout(function() {
+          el.textContent = el.textContent.slice(0, -1);
+          setTimeout(attempt, rnd(11, 25));
+        }, rnd(17, 37));
+      }
+      attempt();
+    }
+
     function tick() {
       if (i >= text.length) {
-        if (cur) cur.remove();
         resolve();
         return;
       }
       var ch = text[i++];
-      el.textContent += ch;
-      var delay = rnd(TW_MIN, TW_MAX);
-      if (ch === ',' || ch === '·' || ch === '—' || ch === '-') delay = TW_COMMA;
-      else if (ch === '.' || ch === '!' || ch === '?') delay = TW_DOT;
-      if (Math.random() < TW_HESITATE) delay += rnd(40, 120);
-      setTimeout(tick, delay);
+      typeChar(ch, function() {
+        var delay = rnd(BIO_MIN, BIO_MAX);
+        if (ch === ',' || ch === '·' || ch === '—' || ch === '-') delay = BIO_COMMA;
+        else if (ch === '.' || ch === '!' || ch === '?') delay = BIO_DOT;
+        if (Math.random() < BIO_HESITATE) delay += rnd(10, 30);
+        setTimeout(tick, delay);
+      });
     }
     tick();
   });
@@ -984,14 +1034,37 @@ var bioFull =
   'работал с нейросетями и печатными платами — от идеи до готового железа.';
 
 var bioEl = document.getElementById('bio-text');
+var bioCursorEl = document.getElementById('bio-cursor');
 setTimeout(function() {
-  typeInto(bioEl, bioFull, false);
+  typeInto(bioEl, bioFull, false).then(function() {
+    // Typing done — start blinking the block cursor
+    if (bioCursorEl) bioCursorEl.classList.add('blinking');
+  });
 }, 1400);
 
 /* ═══════════════════════════════════════
    SCROLL REVEAL + PER-ELEMENT TYPEWRITER
 ═══════════════════════════════════════ */
 var typed = new WeakSet();
+
+/* Simple typewriter — no katakana guessing, no layout shift */
+function typeIntoSimple(el, text) {
+  return new Promise(function(resolve) {
+    el.textContent = '';
+    var i = 0;
+    function tick() {
+      if (i >= text.length) { resolve(); return; }
+      var ch = text[i++];
+      el.textContent += ch;
+      var delay = rnd(TW_MIN, TW_MAX);
+      if (ch === ',' || ch === '·' || ch === '—' || ch === '-') delay = TW_COMMA;
+      else if (ch === '.' || ch === '!' || ch === '?') delay = TW_DOT;
+      if (Math.random() < TW_HESITATE) delay += rnd(40, 120);
+      setTimeout(tick, delay);
+    }
+    tick();
+  });
+}
 
 function activateTypewriters(container) {
   var twEls = container.querySelectorAll('[data-tw]');
@@ -1002,7 +1075,7 @@ function activateTypewriters(container) {
     var text = el.getAttribute('data-tw');
     el.textContent = '';
     setTimeout(function() {
-      typeInto(el, text, false);
+      typeIntoSimple(el, text);
     }, delay);
     delay += 150;
   });
@@ -1022,6 +1095,131 @@ var revealObs = new IntersectionObserver(function(entries) {
 document.querySelectorAll('.reveal').forEach(function(el) {
   revealObs.observe(el);
 });
+
+/* ═══════════════════════════════════════
+   MATRIX SCRAMBLE — heading glitch effect
+   Targets: .section-title, .skill-cat-title,
+            .prompt, .section-label, .timeline-company,
+            .nav-logo, .hero-role
+═══════════════════════════════════════ */
+var scrambleChars = 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ';
+
+// Store original text for each scramble target
+var scrambleTargets = [];
+
+function initScrambleTargets() {
+  var selectors = [
+    '.section-title',
+    '.skill-cat-title',
+    '.prompt',
+    '.timeline-company',
+    '.nav-logo',
+    '.hero-role',
+    '.project-title',
+    '.section-label'
+  ];
+  selectors.forEach(function(sel) {
+    document.querySelectorAll(sel).forEach(function(el) {
+      // Skip elements that have child elements (like nav-logo with <span>)
+      // Store text carefully preserving structure
+      scrambleTargets.push(el);
+    });
+  });
+}
+
+// Scramble a single element for a brief burst
+function scrambleBurst(el) {
+  // Get the "true" text — for elements with child spans (like nav-logo),
+  // only scramble textNode children
+  var nodes = [];
+  el.childNodes.forEach(function(node) {
+    if (node.nodeType === Node.TEXT_NODE && node.textContent.trim().length > 0) {
+      nodes.push(node);
+    }
+  });
+
+  if (nodes.length === 0) {
+    // Fallback: whole textContent
+    var original = el.textContent;
+    if (original.trim().length === 0) return;
+    runScramble(el, original, function(t) { el.textContent = t; });
+    return;
+  }
+
+  nodes.forEach(function(node) {
+    var original = node.textContent;
+    if (original.trim().length === 0) return;
+    runScramble(node, original, function(t) { node.textContent = t; });
+  });
+}
+
+function runScramble(target, original, setter) {
+  var chars = original.split('');
+  var len = chars.length;
+  if (len === 0) return;
+
+  // Pick 1–3 random positions to scramble (avoid spaces and special chars like [])
+  var eligibleIdx = [];
+  for (var i = 0; i < len; i++) {
+    var c = chars[i];
+    // Only scramble alphanumeric and cyrillic letters, not punctuation/spaces
+    if (/[\wа-яёА-ЯЁ]/u.test(c)) eligibleIdx.push(i);
+  }
+  if (eligibleIdx.length === 0) return;
+
+  // How many chars to scramble: 1 to min(3, eligible count)
+  var count = 1 + Math.floor(Math.random() * Math.min(3, eligibleIdx.length));
+  // Shuffle and pick 'count' indices
+  var shuffled = eligibleIdx.slice().sort(function() { return Math.random() - 0.5; });
+  var toScramble = shuffled.slice(0, count);
+
+  var current = chars.slice(); // working copy
+  var iterations = 0;
+  var maxIter = 4 + Math.floor(Math.random() * 5); // 4–8 flicker frames
+
+  var interval = setInterval(function() {
+    // Each frame: replace picked positions with random matrix chars
+    toScramble.forEach(function(idx) {
+      current[idx] = scrambleChars[Math.floor(Math.random() * scrambleChars.length)];
+    });
+    setter(current.join(''));
+    iterations++;
+
+    if (iterations >= maxIter) {
+      clearInterval(interval);
+      // Restore original
+      setter(original);
+    }
+  }, 55); // ~55ms per frame = fast flicker
+}
+
+// Scheduler: randomly pick a target and fire a burst
+function scheduleScramble() {
+  if (scrambleTargets.length === 0) return;
+
+  // Only scramble elements that are currently visible in viewport
+  var visible = scrambleTargets.filter(function(el) {
+    var rect = el.getBoundingClientRect();
+    return rect.top < window.innerHeight && rect.bottom > 0 && el.offsetParent !== null;
+  });
+
+  if (visible.length > 0) {
+    // Pick a random visible element
+    var el = visible[Math.floor(Math.random() * visible.length)];
+    scrambleBurst(el);
+  }
+
+  // Schedule next burst: 480ms–1760ms from now (+20% faster)
+  setTimeout(scheduleScramble, 480 + Math.random() * 1340);
+}
+
+// Start after page has settled
+setTimeout(function() {
+  initScrambleTargets();
+  // Small initial delay so it doesn't fire while typewriter is still going
+  setTimeout(scheduleScramble, 1200);
+}, 800);
+
 </script>
 </body>
 </html>
