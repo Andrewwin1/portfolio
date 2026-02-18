@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Захарцов Андрей — IoT Developer</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #00ff41;
+    --green-dim: #00c832;
+    --green-dark: #003a10;
+    --green-glow: rgba(0,255,65,0.15);
+    --bg: #020c02;
+    --bg2: #040f04;
+    --text: #c8ffd0;
+    --dim: #3a6b40;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  #matrix-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    opacity: 0.07;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.13) 2px, rgba(0,0,0,0.13) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    padding: 16px 0;
+    background: rgba(2,12,2,0.93);
+    border-bottom: 1px solid var(--green-dark);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+  }
+  nav .inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  .nav-logo {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    color: var(--green);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .nav-logo span { color: var(--dim); }
+  nav ul { display: flex; gap: 32px; list-style: none; }
+  nav a {
+    color: var(--dim);
+    text-decoration: none;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  nav a:hover { color: var(--green); text-shadow: 0 0 8px var(--green); }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding-top: 80px;
+    position: relative;
+  }
+  .hero-content { max-width: 720px; }
+
+  .hero-tag {
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--green);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: fadeUp 0.5s 0.2s forwards;
+  }
+  .hero-tag::before { content: '> '; color: var(--dim); }
+
+  .hero-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(36px, 6vw, 72px);
+    font-weight: 900;
+    line-height: 1;
+    color: #e0ffe8;
+    margin-bottom: 8px;
+    opacity: 0;
+    animation: fadeUp 0.5s 0.4s forwards, neonPulse 3s ease-in-out 0.9s infinite;
+    position: relative;
+    letter-spacing: 2px;
+  }
+  /* Glitch layer — separate pseudo kept minimal so neon stays clean */
+  .hero-name::before {
+    content: attr(data-text);
+    position: absolute;
+    left: -2px; top: 0;
+    color: rgba(0,255,65,0.12);
+    animation: glitchA 5s infinite step-end;
+    pointer-events: none;
+    clip-path: inset(0);
+  }
+  .hero-name::after {
+    content: attr(data-text);
+    position: absolute;
+    left: 2px; top: 0;
+    color: rgba(0,200,50,0.08);
+    animation: glitchB 7s infinite step-end;
+    pointer-events: none;
+    clip-path: inset(0);
+  }
+
+  .hero-role {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(14px, 2.5vw, 20px);
+    font-weight: 400;
+    color: var(--dim);
+    letter-spacing: 4px;
+    margin-bottom: 32px;
+    opacity: 0;
+    animation: fadeUp 0.5s 0.6s forwards;
+  }
+
+  .status-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    opacity: 0;
+    animation: fadeUp 0.5s 0.8s forwards;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: statusPulse 2s ease-in-out infinite;
+  }
+
+  .hero-bio {
+    font-size: 14px;
+    line-height: 1.9;
+    color: #8fba95;
+    max-width: 580px;
+    margin-bottom: 40px;
+    border-left: 2px solid var(--green-dark);
+    padding-left: 20px;
+    opacity: 0;
+    animation: fadeUp 0.5s 1s forwards;
+    min-height: 160px;
+  }
+  .hero-bio .prompt {
+    display: block;
+    color: var(--dim);
+    font-size: 11px;
+    margin-bottom: 8px;
+    letter-spacing: 2px;
+  }
+
+  .cursor-blink {
+    display: inline-block;
+    width: 9px; height: 15px;
+    background: var(--green);
+    animation: blink 1s step-end infinite;
+    vertical-align: middle;
+    margin-left: 2px;
+  }
+
+  .hero-contacts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    opacity: 0;
+    animation: fadeUp 0.5s 1.2s forwards;
+  }
+  .contact-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: 1px solid var(--green-dark);
+    color: var(--green);
+    text-decoration: none;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: transparent;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .contact-btn::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: var(--green-glow);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .contact-btn:hover::before { opacity: 1; }
+  .contact-btn:hover {
+    border-color: var(--green);
+    box-shadow: 0 0 16px rgba(0,255,65,0.2);
+    text-shadow: 0 0 8px var(--green);
+  }
+
+  /* SECTIONS */
+  section { padding: 100px 0; }
+
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 5px;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    min-height: 1em;
+  }
+  .section-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(22px, 4vw, 36px);
+    font-weight: 700;
+    color: var(--green);
+    margin-bottom: 60px;
+    position: relative;
+    padding-bottom: 20px;
+  }
+  .section-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 60px; height: 1px;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+  }
+
+  /* SKILLS */
+  .skills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+  }
+  .skill-category {
+    border: 1px solid var(--green-dark);
+    padding: 24px;
+    background: rgba(0,255,65,0.02);
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .skill-category::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: 0;
+    width: 40px; height: 2px;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+  }
+  .skill-category:hover {
+    border-color: var(--green);
+    background: rgba(0,255,65,0.04);
+    box-shadow: 0 0 20px rgba(0,255,65,0.08);
+  }
+  .skill-cat-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--green);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .skill-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+  .skill-tag {
+    padding: 4px 10px;
+    border: 1px solid var(--green-dark);
+    font-size: 11px;
+    color: #8fba95;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  .skill-tag:hover {
+    border-color: var(--green);
+    color: var(--green);
+    text-shadow: 0 0 6px var(--green);
+    box-shadow: 0 0 8px rgba(0,255,65,0.15);
+  }
+
+  /* TIMELINE */
+  .timeline { position: relative; }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, var(--green), transparent);
+  }
+  .timeline-item {
+    padding-left: 40px;
+    padding-bottom: 48px;
+    position: relative;
+  }
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -4px; top: 6px;
+    width: 9px; height: 9px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--green);
+  }
+  .timeline-date {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--dim);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    min-height: 1em;
+  }
+  .timeline-company {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    color: var(--green);
+    margin-bottom: 4px;
+  }
+  .timeline-role {
+    font-size: 13px;
+    color: #8fba95;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .timeline-desc {
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--dim);
+    max-width: 640px;
+  }
+
+  /* PROJECTS */
+  .projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+    gap: 32px;
+  }
+  .project-card {
+    border: 1px solid var(--green-dark);
+    background: var(--bg2);
+    overflow: hidden;
+    transition: all 0.3s;
+  }
+  .project-card:hover {
+    border-color: var(--green);
+    box-shadow: 0 0 30px rgba(0,255,65,0.1);
+    transform: translateY(-2px);
+  }
+  .project-card-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--green-dark);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .project-num {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 2px;
+  }
+  .project-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    color: var(--green);
+    flex: 1;
+    min-height: 1em;
+  }
+  .project-status {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--green);
+    border: 1px solid var(--green);
+    padding: 3px 8px;
+    text-transform: uppercase;
+    animation: pulseBorder 2s ease-in-out infinite;
+  }
+  .project-desc {
+    padding: 16px 24px;
+    font-size: 12px;
+    color: var(--dim);
+    line-height: 1.7;
+    min-height: 56px;
+  }
+
+  /* VIDEO */
+  .video-wrapper {
+    border-top: 1px solid var(--green-dark);
+    position: relative;
+    background: #010901;
+  }
+  .video-placeholder-static {
+    aspect-ratio: 16/9;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .video-placeholder-static::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(0,255,65,0.012) 20px, rgba(0,255,65,0.012) 40px);
+  }
+  .play-ring {
+    width: 56px; height: 56px;
+    border: 2px solid var(--green-dark);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+  }
+  .play-ring svg { fill: var(--dim); width: 18px; height: 18px; margin-left: 3px; }
+  .no-video-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--green-dark);
+    text-transform: uppercase;
+    position: relative;
+    z-index: 1;
+  }
+  .video-embed {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16/9;
+    border: none;
+  }
+
+  /* CONTACT */
+  .contact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+  }
+  .contact-item {
+    border: 1px solid var(--green-dark);
+    padding: 20px 24px;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: block;
+    color: inherit;
+  }
+  .contact-item:hover {
+    border-color: var(--green);
+    background: var(--green-glow);
+    box-shadow: 0 0 16px rgba(0,255,65,0.1);
+  }
+  .contact-item-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .contact-item-value { font-size: 14px; color: var(--green); }
+
+  footer {
+    padding: 40px 0;
+    border-top: 1px solid var(--green-dark);
+    text-align: center;
+  }
+  footer p {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--dim);
+    text-transform: uppercase;
+  }
+
+  .divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--green-dark), transparent);
+  }
+
+  /* REVEAL */
+  .reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* KEYFRAMES */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  @keyframes statusPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,65,0.5); }
+    50% { box-shadow: 0 0 0 5px rgba(0,255,65,0); }
+  }
+  @keyframes pulseBorder {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+  @keyframes neonPulse {
+    0%, 100% {
+      text-shadow:
+        0 0 4px  #fff,
+        0 0 10px #e0ffe8,
+        0 0 20px #00ff41,
+        0 0 40px #00ff41,
+        0 0 70px #00c832,
+        0 0 100px #00c832;
+    }
+    50% {
+      text-shadow:
+        0 0 2px  #e0ffe8,
+        0 0 8px  #00ff41,
+        0 0 18px #00ff41,
+        0 0 35px #00c832,
+        0 0 55px #00c832;
+    }
+  }
+  @keyframes glitchA {
+    0%   { clip-path: inset(40% 0 55% 0); transform: translate(-2px, 0) skew(0.4deg); }
+    15%  { clip-path: inset(10% 0 85% 0); transform: translate(2px,  0) skew(-0.3deg); }
+    30%  { clip-path: inset(70% 0 10% 0); transform: translate(0,    0); }
+    45%  { clip-path: inset(50% 0 30% 0); transform: translate(-1px, 0) skew(0.6deg); }
+    60%  { clip-path: inset(20% 0 60% 0); transform: translate(1px,  0); }
+    100% { clip-path: inset(0);           transform: none; }
+  }
+  @keyframes glitchB {
+    0%   { clip-path: inset(60% 0 30% 0); transform: translate(2px,  0) skew(-0.4deg); }
+    20%  { clip-path: inset(80% 0 5%  0); transform: translate(-2px, 0); }
+    40%  { clip-path: inset(25% 0 65% 0); transform: translate(0,    0) skew(0.5deg); }
+    70%  { clip-path: inset(45% 0 45% 0); transform: translate(1px,  0); }
+    100% { clip-path: inset(0);           transform: none; }
+  }
+
+  @media (max-width: 600px) {
+    .projects-grid { grid-template-columns: 1fr; }
+    nav ul { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="matrix-canvas"></canvas>
+
+<nav>
+  <div class="inner">
+    <div class="nav-logo">AZ<span>_</span>RESUME</div>
+    <ul>
+      <li><a href="#about">Обо мне</a></li>
+      <li><a href="#skills">Навыки</a></li>
+      <li><a href="#experience">Опыт</a></li>
+      <li><a href="#projects">Проекты</a></li>
+      <li><a href="#contact">Контакты</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero" id="about">
+  <div class="container">
+    <div class="hero-content">
+      <div class="hero-tag">ЗАХАРЦОВ АНДРЕЙ МАКСИМОВИЧ · 28 ЛЕТ · МОСКВА</div>
+      <h1 class="hero-name" data-text="ЗАХАРЦОВ АНДРЕЙ">ЗАХАРЦОВ АНДРЕЙ</h1>
+      <div class="hero-role">IoT / Embedded Developer</div>
+      <div class="status-bar">
+        <span class="status-dot"></span>
+        <span>Доступен для работы &nbsp;·&nbsp; МОСКВА &nbsp;·&nbsp; FULLTIME</span>
+      </div>
+      <div class="hero-bio">
+        <span class="prompt">// about.me</span>
+        <span id="bio-text"></span><span class="cursor-blink" id="bio-cursor"></span>
+      </div>
+      <div class="hero-contacts">
+        <a href="/cdn-cgi/l/email-protection#03622d7962686b627177706c75437a626d67667b2d7176" class="contact-btn">&gt;_ Email</a>
+        <a href="https://t.me/ZAAAHAAAR" target="_blank" class="contact-btn">// Telegram</a>
+        <a href="https://github.com/andrewwin1" target="_blank" class="contact-btn">/* GitHub */</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- SKILLS -->
+<section id="skills">
+  <div class="container">
+    <div class="reveal">
+      <p class="section-label" data-tw="// module_02.skills"></p>
+      <h2 class="section-title">Стек технологий</h2>
+    </div>
+    <div class="skills-grid">
+      <div class="skill-category reveal">
+        <div class="skill-cat-title">[MCU] Микроконтроллеры</div>
+        <div class="skill-tags">
+          <span class="skill-tag">ESP8266</span><span class="skill-tag">ESP32</span>
+          <span class="skill-tag">ATmega328</span><span class="skill-tag">ATmega2560</span>
+          <span class="skill-tag">Arduino UNO</span><span class="skill-tag">Arduino MEGA</span>
+          <span class="skill-tag">Arduino Nano</span><span class="skill-tag">Raspberry Pi</span>
+        </div>
+      </div>
+      <div class="skill-category reveal">
+        <div class="skill-cat-title">[BUS] Периферия и протоколы</div>
+        <div class="skill-tags">
+          <span class="skill-tag">I2C</span><span class="skill-tag">SPI</span>
+          <span class="skill-tag">UART</span><span class="skill-tag">RS485</span>
+          <span class="skill-tag">1-Wire</span><span class="skill-tag">PWM</span>
+          <span class="skill-tag">MQTT</span><span class="skill-tag">HTTP/REST</span>
+          <span class="skill-tag">WebSocket</span><span class="skill-tag">WiFi</span>
+          <span class="skill-tag">Bluetooth</span><span class="skill-tag">RFID/NFC</span>
+        </div>
+      </div>
+      <div class="skill-category reveal">
+        <div class="skill-cat-title">[SNS] Датчики и модули</div>
+        <div class="skill-tags">
+          <span class="skill-tag">DHT11/22</span><span class="skill-tag">DS18B20</span>
+          <span class="skill-tag">HC-SR04</span><span class="skill-tag">MPU6050</span>
+          <span class="skill-tag">OLED/LCD</span><span class="skill-tag">Servo/Stepper</span>
+          <span class="skill-tag">Relay</span><span class="skill-tag">WS2812</span>
+          <span class="skill-tag">Camera</span><span class="skill-tag">RC522</span>
+          <span class="skill-tag">Solenoid</span><span class="skill-tag">L298N</span>
+        </div>
+      </div>
+      <div class="skill-category reveal">
+        <div class="skill-cat-title">[DEV] Языки и инструменты</div>
+        <div class="skill-tags">
+          <span class="skill-tag">C++</span><span class="skill-tag">Python</span>
+          <span class="skill-tag">Arduino IDE</span><span class="skill-tag">PlatformIO</span>
+          <span class="skill-tag">pyserial</span><span class="skill-tag">paho-mqtt</span>
+          <span class="skill-tag">OpenCV</span><span class="skill-tag">YOLOv8</span>
+          <span class="skill-tag">aiogram</span><span class="skill-tag">Linux</span>
+          <span class="skill-tag">Git</span><span class="skill-tag">LUT/PCB</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- EXPERIENCE -->
+<section id="experience">
+  <div class="container">
+    <div class="reveal">
+      <p class="section-label" data-tw="// module_03.experience"></p>
+      <h2 class="section-title">Опыт работы</h2>
+    </div>
+    <div class="timeline">
+      <div class="timeline-item reveal">
+        <div class="timeline-date" data-tw="Сент 2024 — Дек 2024 · 4 мес"></div>
+        <div class="timeline-company">QWESTERN</div>
+        <div class="timeline-role">Инженер-программист</div>
+        <div class="timeline-desc">Реализация проектов на Arduino, ESP и Raspberry Pi. Разработка Telegram-бота, написание загадок на Python с интеграцией нейросетей (YOLOv8) для распознавания голоса и лиц. Создание ТЗ для аутсорс-программистов. Освоил разводку и травление ПП по технологии ЛУТ.</div>
+      </div>
+      <div class="timeline-item reveal">
+        <div class="timeline-date" data-tw="Апр 2024 — Сент 2024 · 6 мес"></div>
+        <div class="timeline-company">ФРИЛАНС</div>
+        <div class="timeline-role">Инженер-программист</div>
+        <div class="timeline-desc">Ремонт устройств и загадок в квестах. Переписывание кода с нуля при отсутствии исходников. Создание технической документации для персонала.</div>
+      </div>
+      <div class="timeline-item reveal">
+        <div class="timeline-date" data-tw="Янв 2024 — Апр 2024 · 4 мес"></div>
+        <div class="timeline-company">QUEST-STARS</div>
+        <div class="timeline-role">Инженер-программист</div>
+        <div class="timeline-desc">Написание программ управления квестом. Разработка Telegram-бота с базой данных клиентов и парсингом стороннего сайта для выдачи пропусков без официального API.</div>
+      </div>
+      <div class="timeline-item reveal">
+        <div class="timeline-date" data-tw="Авг 2023 — Янв 2024 · 6 мес"></div>
+        <div class="timeline-company">ФРИЛАНС</div>
+        <div class="timeline-role">Инженер-программист</div>
+        <div class="timeline-desc">Рефакторинг кода, написание веб-интерфейсов на ESP8266. Полное техническое обеспечение открывающихся квестов — код, железо, обвязка. Написание собственных проектов на Python.</div>
+      </div>
+      <div class="timeline-item reveal">
+        <div class="timeline-date" data-tw="Май 2023 — Авг 2023 · 4 мес"></div>
+        <div class="timeline-company">КЛАУСТРОФОБИЯ</div>
+        <div class="timeline-role">Инженер-программист</div>
+        <div class="timeline-desc">Написание кода для загадок в квестах с использованием Arduino и ESP8266.</div>
+      </div>
+      <div class="timeline-item reveal">
+        <div class="timeline-date" data-tw="Июль 2021 — Май 2023 · 1 год 11 мес"></div>
+        <div class="timeline-company">КЛАУСТРОФОБИЯ</div>
+        <div class="timeline-role">Инженер</div>
+        <div class="timeline-desc">Ремонт загадок в квестах, создание новых загадок в существующие квесты. Обслуживание компьютеров, Arduino и серверов. Начало пути в embedded-разработке.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- PROJECTS -->
+<!-- ╔══════════════════════════════════════════════╗ -->
+<!-- ║  ВСТАВЬ СВОИ ССЫЛКИ RUTUBE В data-rutube=   ║ -->
+<!-- ║  Формат: https://rutube.ru/video/XXXXXX/    ║ -->
+<!-- ╚══════════════════════════════════════════════╝ -->
+<section id="projects">
+  <div class="container">
+    <div class="reveal">
+      <p class="section-label" data-tw="// module_04.projects"></p>
+      <h2 class="section-title">Мои проекты</h2>
+    </div>
+    <div class="projects-grid">
+
+      <div class="project-card reveal">
+        <div class="project-card-header">
+          <span class="project-num">PRJ_MAP</span>
+          <span class="project-title" data-tw="Интерактивная карта"></span>
+          <span class="project-status">ONLINE</span>
+        </div>
+        <div class="project-desc">Проект интерактивной карты для квеста</div>
+        <div class="video-wrapper" data-rutube="https://rutube.ru/play/embed/6e428f227fbe17ec41369512c92c8e3d/?p=ulnAy1Z6HdKFIHWqWRA9jQ"></div>
+      </div>
+
+      <div class="project-card reveal">
+        <div class="project-card-header">
+          <span class="project-num">PRJ_HAND</span>
+          <span class="project-title" data-tw="Проект нейросети"></span>
+          <span class="project-status">ONLINE</span>
+        </div>
+        <div class="project-desc">Проект нейросети на YOLOv8 python с анализом изображения на видео с камеры</div>
+        <div class="video-wrapper" data-rutube="https://rutube.ru/play/embed/1baa52e20921f2015bb1e8eae27dd4fa/?p=7fwWWOsetR8Z-KgwKMTW1Q"></div>
+      </div>
+
+      <div class="project-card reveal">
+        <div class="project-card-header">
+          <span class="project-num">PRJ_CAR</span>
+          <span class="project-title" data-tw="Проект с машинкой"></span>
+          <span class="project-status">ONLINE</span>
+        </div>
+        <div class="project-desc">Управление машинкой при помощи руля для компьютера</div>
+        <div class="video-wrapper" data-rutube="https://rutube.ru/play/embed/a894ed4760c1aaa0e65f8092ad742480/?p=jPDCT9LFWFebGYBSgcej9A"></div>
+      </div>
+
+      <div class="project-card reveal">
+        <div class="project-card-header">
+          <span class="project-num">PRJ_??</span>
+          <span class="project-title" data-tw="Проект ???"></span>
+          <span class="project-status">OFFLINE</span>
+        </div>
+        <div class="project-desc">---</div>
+        <div class="video-wrapper" data-rutube="????"></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="container">
+    <div class="reveal">
+      <p class="section-label" data-tw="// module_05.contact"></p>
+      <h2 class="section-title">Связаться со мной</h2>
+    </div>
+    <div class="contact-grid reveal">
+      <a href="/cdn-cgi/l/email-protection#6706491d060c0f061513140811271e060903021f491512" class="contact-item">
+        <div class="contact-item-label">Email</div>
+        <div class="contact-item-value"><span class="__cf_email__" data-cfemail="fe9fd0849f95969f8c8a8d9188be879f909a9b86d08c8b">[email&#160;protected]</span></div>
+      </a>
+      <a href="https://t.me/ZAAAHAAAR" target="_blank" class="contact-item">
+        <div class="contact-item-label">Telegram</div>
+        <div class="contact-item-value">@ZAAAHAAAR</div>
+      </a>
+      <a href="https://github.com/Andrewwin1" target="_blank" class="contact-item">
+        <div class="contact-item-label">GitHub</div>
+        <div class="contact-item-value">Andrewwin1</div>
+      </a>
+      <div class="contact-item">
+        <div class="contact-item-label">Локация</div>
+        <div class="contact-item-value">Москва</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p>© 2026 &nbsp;·&nbsp; ЗАХАРЦОВ АНДРЕЙ МАКСИМОВИЧ &nbsp;·&nbsp; IOT / EMBEDDED DEVELOPER</p>
+  </div>
+</footer>
+
+<script>
+/* ═══════════════════════════════════════
+   MATRIX RAIN — scroll-reactive
+═══════════════════════════════════════ */
+const canvas = document.getElementById('matrix-canvas');
+const ctx = canvas.getContext('2d');
+
+let lastScrollY = window.scrollY;
+let scrollAccum = 0;
+let lastScrollTime = performance.now();
+
+window.addEventListener('scroll', function() {
+  var now = performance.now();
+  var dy = window.scrollY - lastScrollY;
+  var dt = Math.max(now - lastScrollTime, 1);
+  scrollAccum += (dy / dt) * 16;
+  lastScrollY = window.scrollY;
+  lastScrollTime = now;
+}, { passive: true });
+
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+var matrixChars = 'アイウエオカキクケコサシスセソタチツテトABCDEFGHIJKLMN0123456789</>{}[]';
+var fSize = 14;
+var mCols, drops, colSpeeds, brightCol;
+
+function initDrops() {
+  mCols = Math.floor(canvas.width / fSize);
+  drops = [];
+  colSpeeds = [];
+  brightCol = [];
+  for (var i = 0; i < mCols; i++) {
+    drops.push(Math.random() * -60);
+    colSpeeds.push(0.4 + Math.random() * 0.6);
+    brightCol.push(0);
+  }
+}
+initDrops();
+
+function applyScrollBurst(vel) {
+  if (Math.abs(vel) < 0.5) return;
+  var intensity = Math.min(Math.abs(vel) / 30, 1);
+  var width = Math.floor(mCols * (0.3 + intensity * 0.5));
+  var start = Math.floor(Math.random() * Math.max(1, mCols - width));
+  for (var i = start; i < start + width && i < mCols; i++) {
+    brightCol[i] = Math.min(brightCol[i] + intensity, 1);
+    if (drops[i] < 5) colSpeeds[i] = 0.6 + Math.random() * 1.4;
+  }
+}
+
+function drawMatrix() {
+  for (var i = 0; i < mCols; i++) {
+    brightCol[i] = Math.max(0, brightCol[i] - 0.04);
+  }
+  if (Math.abs(scrollAccum) > 0.3) applyScrollBurst(scrollAccum);
+  scrollAccum *= 0.7;
+
+  var velMag = Math.min(Math.abs(scrollAccum) / 20, 1);
+  var trailOpacity = Math.max(0.015, 0.05 - velMag * 0.035);
+  ctx.fillStyle = 'rgba(2,12,2,' + trailOpacity + ')';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.font = fSize + 'px Share Tech Mono';
+
+  for (var i = 0; i < drops.length; i++) {
+    var b = brightCol[i];
+    var lum = Math.floor(120 + b * 135);
+    ctx.fillStyle = 'rgb(' + Math.floor(lum * 0.82) + ',' + lum + ',' + Math.floor(lum * 0.85) + ')';
+    ctx.fillText(matrixChars[Math.floor(Math.random() * matrixChars.length)], i * fSize, drops[i] * fSize);
+    var boost = 1 + b * 3.5;
+    drops[i] += colSpeeds[i] * boost;
+    if (drops[i] * fSize > canvas.height && Math.random() > 0.975) {
+      drops[i] = 0;
+      colSpeeds[i] = 0.4 + Math.random() * 0.6;
+    }
+  }
+}
+
+function matrixLoop() { drawMatrix(); requestAnimationFrame(matrixLoop); }
+matrixLoop();
+window.addEventListener('resize', function() { resizeCanvas(); initDrops(); });
+
+/* ═══════════════════════════════════════
+   RUTUBE EMBED
+═══════════════════════════════════════ */
+function getRutubeEmbed(url) {
+  var m = url.match(/rutube\.ru\/video\/([a-zA-Z0-9]+)/);
+  if (m) return 'https://rutube.ru/play/embed/' + m[1] + '/';
+  if (url.indexOf('rutube.ru/play/embed/') !== -1) return url;
+  return null;
+}
+document.querySelectorAll('.video-wrapper').forEach(function(wrapper) {
+  var raw = (wrapper.getAttribute('data-rutube') || '').trim();
+  var embed = getRutubeEmbed(raw);
+  if (embed && raw.indexOf('ВСТАВЬ') === -1) {
+    var iframe = document.createElement('iframe');
+    iframe.className = 'video-embed';
+    iframe.src = embed;
+    iframe.setAttribute('allowfullscreen', '');
+    wrapper.appendChild(iframe);
+  } else {
+    wrapper.innerHTML =
+      '<div class="video-placeholder-static">' +
+        '<div class="play-ring"><svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg></div>' +
+        '<span class="no-video-label">???</span>' +
+      '</div>';
+  }
+});
+
+/* ═══════════════════════════════════════
+   TYPEWRITER ENGINE
+═══════════════════════════════════════ */
+var TW_MIN      = 14;
+var TW_MAX      = 38;
+var TW_COMMA    = 90;
+var TW_DOT      = 160;
+var TW_HESITATE = 0.06;
+
+function rnd(a, b) { return a + Math.random() * (b - a); }
+
+function typeInto(el, text, addCursor) {
+  return new Promise(function(resolve) {
+    el.textContent = '';
+    var i = 0;
+    var cur = null;
+    if (addCursor) {
+      cur = document.createElement('span');
+      cur.className = 'cursor-blink';
+      el.parentNode.insertBefore(cur, el.nextSibling);
+    }
+    function tick() {
+      if (i >= text.length) {
+        if (cur) cur.remove();
+        resolve();
+        return;
+      }
+      var ch = text[i++];
+      el.textContent += ch;
+      var delay = rnd(TW_MIN, TW_MAX);
+      if (ch === ',' || ch === '·' || ch === '—' || ch === '-') delay = TW_COMMA;
+      else if (ch === '.' || ch === '!' || ch === '?') delay = TW_DOT;
+      if (Math.random() < TW_HESITATE) delay += rnd(40, 120);
+      setTimeout(tick, delay);
+    }
+    tick();
+  });
+}
+
+/* ─── HERO BIO ─── */
+var bioFull =
+  '5 лет в разработке встраиваемых систем и IoT — полностью самоучка. ' +
+  'Не потому что не было возможности, а потому что не было нужды: ' +
+  'когда горят глаза и руки тянутся к паяльнику, учёба идёт быстрее любого университета. ' +
+  'Проектировал загадки для квест-комнат, поднимал системы с нуля без исходников, ' +
+  'работал с нейросетями и печатными платами — от идеи до готового железа.';
+
+var bioEl = document.getElementById('bio-text');
+setTimeout(function() {
+  typeInto(bioEl, bioFull, false);
+}, 1400);
+
+/* ═══════════════════════════════════════
+   SCROLL REVEAL + PER-ELEMENT TYPEWRITER
+═══════════════════════════════════════ */
+var typed = new WeakSet();
+
+function activateTypewriters(container) {
+  var twEls = container.querySelectorAll('[data-tw]');
+  var delay = 80;
+  twEls.forEach(function(el) {
+    if (typed.has(el)) return;
+    typed.add(el);
+    var text = el.getAttribute('data-tw');
+    el.textContent = '';
+    setTimeout(function() {
+      typeInto(el, text, false);
+    }, delay);
+    delay += 150;
+  });
+}
+
+var revealObs = new IntersectionObserver(function(entries) {
+  entries.forEach(function(entry) {
+    if (!entry.isIntersecting) return;
+    var el = entry.target;
+    if (!el.classList.contains('visible')) {
+      el.classList.add('visible');
+      activateTypewriters(el);
+    }
+  });
+}, { threshold: 0.12 });
+
+document.querySelectorAll('.reveal').forEach(function(el) {
+  revealObs.observe(el);
+});
+</script>
+</body>
+</html>
